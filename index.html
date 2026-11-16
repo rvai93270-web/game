@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<link rel="icon" href="data:,"/>
+<title>মেট্রো রানার — দৌড়ের গেম</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF6E9; --surface:#FFFFFF; --surface2:#FFF0D6; --ink:#1A2332; --muted:#6B7280;
+    --accent:#FF5A1F; --accent-dark:#E64A12; --teal:#0E9A8B; --gold:#FFB800; --gold-dark:#E69C00;
+    --line:#F0DDC0; --track:#2B3446;
+    --shadow:0 10px 30px rgba(26,35,50,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#12151E; --surface:#1C2130; --surface2:#252B3E; --ink:#F4EFE6; --muted:#A8AFC2; --line:#2E364E; --shadow:0 10px 30px rgba(0,0,0,.4); }
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:"Hind Siliguri",system-ui,sans-serif; overflow-x:hidden;}
+  button{font-family:inherit; cursor:pointer; min-height:44px;}
+  .wrap{max-width:980px; margin:0 auto; padding:14px 14px 20px;}
+  /* HUD */
+  .hud{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-badge{width:42px;height:42px;border-radius:12px;background:var(--accent);display:grid;place-items:center;font-size:22px;}
+  .brand h1{font-family:"Bricolage Grotesque","Hind Siliguri",sans-serif; font-size:22px; line-height:1; margin:0; letter-spacing:-.02em;}
+  .brand p{margin:2px 0 0; font-size:12.5px; color:var(--muted); font-weight:500;}
+  .stats{display:flex; gap:8px; flex-wrap:wrap;}
+  .stat{background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:7px 13px; display:flex; align-items:center; gap:7px; font-weight:700; font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,.04); white-space:nowrap;}
+  .stat small{font-weight:600; color:var(--muted); font-size:12px;}
+  .coin-dot{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #FFE27A, var(--gold) 55%, var(--gold-dark)); border:2px solid #D98E00; display:inline-block; flex:none;}
+  .icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:18px;color:var(--ink);}
+  /* Stage */
+  .stage{position:relative; border-radius:22px; overflow:hidden; background:#1B2436; box-shadow:var(--shadow); border:1px solid var(--line);}
+  canvas{display:block; width:100%; height:min(68vh,620px); min-height:380px; touch-action:none;}
+  @media (max-width:560px){ canvas{height:62vh; min-height:420px;} .brand p{display:none;} }
+  /* Overlays */
+  .overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(12,16,26,.55); backdrop-filter:blur(3px); z-index:5;}
+  .overlay[hidden]{display:none;}
+  .panel{background:var(--surface); color:var(--ink); border-radius:20px; padding:24px 22px; max-width:440px; width:100%; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.35);}
+  .panel .big{font-size:44px; line-height:1;}
+  .panel h2{font-family:"Bricolage Grotesque","Hind Siliguri",sans-serif; font-size:30px; margin:8px 0 6px; line-height:1.15;}
+  .panel p{margin:0 0 14px; color:var(--muted); font-size:15px; line-height:1.55;}
+  .howto{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0 18px; text-align:left;}
+  .howto div{background:var(--surface2); border-radius:12px; padding:10px 12px; font-size:13.5px; font-weight:600; line-height:1.4;}
+  .howto b{display:block; font-size:15px; margin-bottom:1px;}
+  .cta{background:var(--accent); color:#fff; border:none; border-radius:999px; padding:13px 30px; font-size:17px; font-weight:700; width:100%; box-shadow:0 8px 20px rgba(255,90,31,.35);}
+  .cta:active{transform:scale(.98); background:var(--accent-dark);}
+  .ghost{background:transparent; border:1.5px solid var(--line); color:var(--ink); border-radius:999px; padding:11px 22px; font-weight:700; font-size:15px; width:100%; margin-top:8px;}
+  .final-stats{display:flex; gap:8px; justify-content:center; margin:6px 0 16px; flex-wrap:wrap;}
+  .final-stats .stat{font-size:16px;}
+  .newbest{display:inline-block; background:#FFF3C4; color:#7A5200; border:1px solid #F2D06B; font-weight:700; font-size:13px; border-radius:999px; padding:4px 12px; margin-bottom:8px;}
+  @media (prefers-color-scheme: dark){ .newbest{background:#3A3112; color:#FFD94D; border-color:#6B5A1E;} }
+  /* Touch controls */
+  .controls{display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-top:12px;}
+  .ctl-group{display:flex; gap:10px;}
+  .ctl{width:60px; height:60px; border-radius:18px; border:1px solid var(--line); background:var(--surface); box-shadow:0 4px 14px rgba(0,0,0,.07); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; color:var(--ink); user-select:none; touch-action:manipulation;}
+  .ctl span{font-size:20px; line-height:1;}
+  .ctl small{font-size:10.5px; font-weight:700; color:var(--muted); margin-top:2px;}
+  .ctl:active{background:var(--surface2); transform:scale(.95);}
+  .ctl.wide{width:auto; padding:0 18px; height:60px; border-radius:18px; flex-direction:row; gap:8px;}
+  .tips{margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;}
+  .tip{font-size:12.5px; font-weight:600; color:var(--muted); background:var(--surface); border:1px solid var(--line); padding:7px 12px; border-radius:999px;}
+  .tip b{color:var(--ink);}
+  .flash{position:absolute; top:14px; left:50%; transform:translateX(-50%); background:rgba(20,26,40,.88); color:#FFD94D; font-weight:700; font-size:14px; padding:8px 16px; border-radius:999px; z-index:4; pointer-events:none; opacity:0; transition:opacity .25s;}
+  .flash.show{opacity:1;}
+  .speedbar{height:6px; background:var(--surface2); border-radius:99px; overflow:hidden; margin-top:10px; border:1px solid var(--line);}
+  .speedbar i{display:block; height:100%; width:10%; background:var(--teal); border-radius:99px; transition:width .3s;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud">
+    <div class="brand">
+      <div class="brand-badge" aria-hidden="true">🏃</div>
+      <div>
+        <h1>মেট্রো রানার</h1>
+        <p>Subway Surfers-এর মতো অনন্ত দৌড়ের গেম</p>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div class="stats">
+        <div class="stat"><small>স্কোর</small> <span id="scoreVal">0</span></div>
+        <div class="stat"><span class="coin-dot"></span> <span id="coinVal">0</span></div>
+        <div class="stat"><small>সেরা</small> <span id="bestVal">0</span></div>
+      </div>
+      <button class="icon-btn" id="pauseBtn" aria-label="বিরতি / আবার শুরু" title="বিরতি">⏸</button>
+      <button class="icon-btn" id="soundBtn" aria-label="শব্দ চালু/বন্ধ" title="শব্দ">🔊</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="game" aria-label="দৌড়ের গেমের মাঠ"></canvas>
+    <div class="flash" id="flash">+ কয়েন!</div>
+
+    <!-- Start -->
+    <div class="overlay" id="startOverlay">
+      <div class="panel">
+        <div class="big" aria-hidden="true">🚇</div>
+        <h2>দৌড় শুরু করো!</h2>
+        <p>ট্রেন আর বাধা এড়িয়ে যত দূর পারো দৌড়াও। কয়েন জমাও, গতি বাড়তে থাকবে — একবার ধাক্কা খেলেই খেলা শেষ!</p>
+        <div class="howto">
+          <div><b>⬅️ ➡️ লেন বদলাও</b>তীর চিহ্ন / A, D অথবা সোয়াইপ</div>
+          <div><b>⬆️ লাফ দাও</b>নিচু বাধা টপকাতে — W / Space</div>
+          <div><b>⬇️ স্লাইড করো</b>উঁচু বাধার নিচ দিয়ে — S</div>
+          <div><b>🚂 ট্রেন সাবধান!</b>ট্রেন টপকানো যায় না, লেন বদলাও</div>
+        </div>
+        <button class="cta" id="startBtn">▶ খেলা শুরু করো</button>
+      </div>
+    </div>
+
+    <!-- Game over -->
+    <div class="overlay" id="overOverlay" hidden>
+      <div class="panel">
+        <div class="big" aria-hidden="true">💥</div>
+        <h2>ধাক্কা খেয়ে গেলে!</h2>
+        <div id="newBestWrap"></div>
+        <div class="final-stats">
+          <div class="stat"><small>স্কোর</small> <span id="finalScore">0</span></div>
+          <div class="stat"><span class="coin-dot"></span> <span id="finalCoins">0</span></div>
+          <div class="stat"><small>দূরত্ব</small> <span id="finalDist">0 মি</span></div>
+        </div>
+        <button class="cta" id="retryBtn">↻ আবার দৌড়াও</button>
+        <button class="ghost" id="menuBtn">শুরুর স্ক্রিনে যাও</button>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div class="overlay" id="pauseOverlay" hidden>
+      <div class="panel">
+        <div class="big" aria-hidden="true">⏸️</div>
+        <h2>বিরতি</h2>
+        <p>খেলা থামানো আছে। তৈরি হলেই আবার দৌড় শুরু করো।</p>
+        <button class="cta" id="resumeBtn">▶ আবার শুরু করো</button>
+        <button class="ghost" id="restartFromPauseBtn">↻ গোড়া থেকে শুরু</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="speedbar" aria-hidden="true"><i id="speedFill"></i></div>
+
+  <div class="controls" aria-label="টাচ নিয়ন্ত্রণ">
+    <div class="ctl-group">
+      <button class="ctl" id="btnLeft" aria-label="বামে যাও"><span>◀</span><small>বাম</small></button>
+      <button class="ctl" id="btnRight" aria-label="ডানে যাও"><span>▶</span><small>ডান</small></button>
+    </div>
+    <div class="ctl-group">
+      <button class="ctl" id="btnSlide" aria-label="স্লাইড করো"><span>⬇</span><small>স্লাইড</small></button>
+      <button class="ctl wide" id="btnJump" aria-label="লাফ দাও"><span>⬆</span><small style="font-size:12px;">লাফ</small></button>
+    </div>
+  </div>
+
+  <div class="tips">
+    <span class="tip"><b>কীবোর্ড:</b> ← → লেন · ↑ / Space লাফ · ↓ স্লাইড · P বিরতি</span>
+    <span class="tip"><b>মোবাইল:</b> স্ক্রিনে সোয়াইপ করো অথবা নিচের বোতাম চাপো</span>
+    <span class="tip"><b>টিপস:</b> সোনালি কয়েনের লাইন ধরে দৌড়ালে বেশি পয়েন্ট!</span>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var scoreEl = document.getElementById('scoreVal');
+var coinEl = document.getElementById('coinVal');
+var bestEl = document.getElementById('bestVal');
+var speedFill = document.getElementById('speedFill');
+var flashEl = document.getElementById('flash');
+
+var W=0,H=0,DPR=1, cx=0, horizonY=0, groundY=0, laneW=0;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  var r = canvas.getBoundingClientRect();
+  W = r.width; H = r.height;
+  canvas.width = Math.round(W*DPR); canvas.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx = W/2; horizonY = H*0.30; groundY = H*0.88; laneW = Math.min(W*0.24, 150);
+}
+window.addEventListener('resize', resize);
+
+/* ---------- Audio (tiny synth, no files) ---------- */
+var audioCtx=null, soundOn=true;
+function beep(freq, dur, type, vol, slideTo){
+  if(!soundOn) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type||'sine'; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime+dur);
+    g.gain.setValueAtTime(vol||0.12, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+function sndCoin(){ beep(950,0.09,'square',0.06,1500); }
+function sndJump(){ beep(300,0.16,'sine',0.08,620); }
+function sndSlide(){ beep(500,0.12,'sine',0.05,180); }
+function sndCrash(){ beep(160,0.35,'sawtooth',0.14,55); }
+function sndSwitch(){ beep(420,0.06,'sine',0.045,540); }
+
+/* ---------- Game state ---------- */
+var STATE = { IDLE:0, PLAYING:1, PAUSED:2, OVER:3 };
+var state = STATE.IDLE;
+var best = 0;
+
+var player, obstacles, coinsArr, particles, speed, baseSpeed, distance, score, coinCount, runPhase, spawnTimer, coinTimer, elapsed, shake, flashTimer, coinStreak;
+
+function resetGame(){
+  player = { lane:0, x:0, jumpY:0, vy:0, jumping:false, sliding:0, tilt:0 };
+  obstacles = []; coinsArr = []; particles = [];
+  baseSpeed = 30; speed = baseSpeed;
+  distance = 0; score = 0; coinCount = 0; runPhase = 0; elapsed = 0;
+  spawnTimer = 0.9; coinTimer = 0.4; shake = 0; flashTimer = 0; coinStreak = 0;
+}
+resetGame();
+
+function project(z){
+  var s = 14/(14+z);
+  return { s:s, y: horizonY + (groundY-horizonY)*s };
+}
+function laneX(lane, s){ return cx + lane*laneW*s; }
+
+/* ---------- Spawning ---------- */
+var LANES=[-1,0,1];
+function spawnRow(z){
+  var r = Math.random();
+  if(r < 0.30){
+    var lane = LANES[Math.floor(Math.random()*3)];
+    obstacles.push({type:'train', lane:lane, z:z, len:16, hit:false});
+  } else if(r < 0.52){
+    var free = Math.floor(Math.random()*3);
+    for(var i=0;i<3;i++){
+      if(i===free) continue;
+      var t = Math.random()<0.5 ? 'low' : 'high';
+      obstacles.push({type:t, lane:LANES[i], z:z, hit:false});
+    }
+  } else {
+    var lane2 = LANES[Math.floor(Math.random()*3)];
+    var t2 = ['low','high','low','train'][Math.floor(Math.random()*4)];
+    obstacles.push({type:t2, lane:lane2, z:z, len: t2==='train'?14:0, hit:false});
+  }
+  if(Math.random()<0.55){
+    var cl = LANES[Math.floor(Math.random()*3)];
+    var high = Math.random()<0.28;
+    var n = 4+Math.floor(Math.random()*3);
+    for(var k=0;k<n;k++) coinsArr.push({lane:cl, z:z+4+k*3.2, high:high, taken:false, spin:Math.random()*6});
+  }
+}
+function spawnCoins(z){
+  var cl = LANES[Math.floor(Math.random()*3)];
+  var high = Math.random()<0.25;
+  var n = 5;
+  for(var k=0;k<n;k++) coinsArr.push({lane:cl, z:z+k*3.2, high:high, taken:false, spin:Math.random()*6});
+}
+
+/* ---------- Input ---------- */
+function moveLeft(){ if(state!==STATE.PLAYING) return; if(player.lane>-1){ player.lane--; sndSwitch(); } }
+function moveRight(){ if(state!==STATE.PLAYING) return; if(player.lane<1){ player.lane++; sndSwitch(); } }
+function doJump(){
+  if(state!==STATE.PLAYING) return;
+  if(!player.jumping){ player.jumping=true; player.vy=2.55; player.sliding=0; sndJump(); }
+}
+function doSlide(){
+  if(state!==STATE.PLAYING) return;
+  if(player.jumping){ player.vy = Math.min(player.vy, -3.2); }
+  player.sliding = 0.55; sndSlide();
+}
+document.addEventListener('keydown', function(e){
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){ moveLeft(); e.preventDefault(); }
+  else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D'){ moveRight(); e.preventDefault(); }
+  else if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'||e.key===' '){ if(state===STATE.IDLE||state===STATE.OVER){ startGame(); } else { doJump(); } e.preventDefault(); }
+  else if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){ doSlide(); e.preventDefault(); }
+  else if(e.key==='p'||e.key==='P'||e.key==='Escape'){ togglePause(); }
+  else if(e.key==='Enter'){ if(state===STATE.IDLE||state===STATE.OVER) startGame(); }
+});
+function bindBtn(id, fn){
+  var el=document.getElementById(id);
+  el.addEventListener('pointerdown', function(e){ e.preventDefault(); fn(); });
+}
+bindBtn('btnLeft', moveLeft); bindBtn('btnRight', moveRight);
+bindBtn('btnJump', function(){ if(state===STATE.IDLE||state===STATE.OVER) startGame(); else doJump(); });
+bindBtn('btnSlide', doSlide);
+
+/* swipe */
+var tsX=0, tsY=0, tsT=0;
+canvas.addEventListener('touchstart', function(e){ var t=e.changedTouches[0]; tsX=t.clientX; tsY=t.clientY; tsT=Date.now(); }, {passive:true});
+canvas.addEventListener('touchend', function(e){
+  var t=e.changedTouches[0]; var dx=t.clientX-tsX, dy=t.clientY-tsY;
+  if(Math.abs(dx)<18 && Math.abs(dy)<18){ if(state===STATE.IDLE||state===STATE.OVER) startGame(); else doJump(); return; }
+  if(Math.abs(dx)>Math.abs(dy)){ if(dx>0) moveRight(); else moveLeft(); }
+  else { if(dy<0) doJump(); else doSlide(); }
+}, {passive:true});
+canvas.addEventListener('mousedown', function(e){ tsX=e.clientX; tsY=e.clientY; });
+canvas.addEventListener('mouseup', function(e){
+  var dx=e.clientX-tsX, dy=e.clientY-tsY;
+  if(Math.abs(dx)>24||Math.abs(dy)>24){
+    if(Math.abs(dx)>Math.abs(dy)){ if(dx>0) moveRight(); else moveLeft(); }
+    else { if(dy<0) doJump(); else doSlide(); }
+  }
+});
+
+/* ---------- Flow ---------- */
+var startOverlay=document.getElementById('startOverlay');
+var overOverlay=document.getElementById('overOverlay');
+var pauseOverlay=document.getElementById('pauseOverlay');
+function startGame(){
+  resetGame(); state=STATE.PLAYING;
+  startOverlay.hidden=true; overOverlay.hidden=true; pauseOverlay.hidden=true;
+  document.getElementById('pauseBtn').textContent='⏸';
+  beep(520,0.1,'sine',0.07,780);
+}
+function gameOver(){
+  state=STATE.OVER; shake=14; sndCrash();
+  var isBest = Math.floor(score) > best;
+  if(isBest) best = Math.floor(score);
+  bestEl.textContent = best;
+  document.getElementById('finalScore').textContent = Math.floor(score);
+  document.getElementById('finalCoins').textContent = coinCount;
+  document.getElementById('finalDist').textContent = Math.floor(distance)+' মি';
+  document.getElementById('newBestWrap').innerHTML = isBest && score>0 ? '<span class="newbest">🏆 নতুন সেরা স্কোর!</span>' : '';
+  setTimeout(function(){ overOverlay.hidden=false; }, 650);
+}
+function togglePause(){
+  if(state===STATE.PLAYING){ state=STATE.PAUSED; pauseOverlay.hidden=false; document.getElementById('pauseBtn').textContent='▶'; }
+  else if(state===STATE.PAUSED){ state=STATE.PLAYING; pauseOverlay.hidden=true; document.getElementById('pauseBtn').textContent='⏸'; }
+}
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('retryBtn').addEventListener('click', startGame);
+document.getElementById('resumeBtn').addEventListener('click', togglePause);
+document.getElementById('restartFromPauseBtn').addEventListener('click', startGame);
+document.getElementById('menuBtn').addEventListener('click', function(){ overOverlay.hidden=true; startOverlay.hidden=false; state=STATE.IDLE; resetGame(); });
+document.getElementById('pauseBtn').addEventListener('click', function(){ if(state===STATE.PLAYING||state===STATE.PAUSED) togglePause(); });
+document.getElementById('soundBtn').addEventListener('click', function(){ soundOn=!soundOn; this.textContent = soundOn?'🔊':'🔇'; if(soundOn) sndCoin(); });
+document.addEventListener('visibilitychange', function(){ if(document.hidden && state===STATE.PLAYING) togglePause(); });
+
+function showFlash(txt){ flashEl.textContent=txt; flashEl.classList.add('show'); flashTimer=0.9; }
+
+/* ---------- Update ---------- */
+function update(dt){
+  elapsed += dt;
+  speed = Math.min(baseSpeed + elapsed*0.55, 78);
+  distance += speed*dt*0.55;
+  score += speed*dt*1.6 + coinStreak*0;
+  runPhase += dt * (10 + speed*0.22);
+  var targetX = player.lane;
+  player.x += (targetX - player.x) * Math.min(1, dt*11);
+  player.tilt = (targetX - player.x) * -0.5;
+  if(player.jumping){
+    player.vy -= 6.4*dt;
+    player.jumpY += player.vy*dt;
+    if(player.jumpY<=0){ player.jumpY=0; player.jumping=false; player.vy=0; burst(playerScreenX(), groundY, 5, '#C9B18A'); }
+  }
+  if(player.sliding>0) player.sliding -= dt;
+  spawnTimer -= dt;
+  if(spawnTimer<=0){ spawnRow(115 + Math.random()*15); spawnTimer = Math.max(0.62, 1.55 - elapsed*0.008) + Math.random()*0.35; }
+  coinTimer -= dt;
+  if(coinTimer<=0){ spawnCoins(110+Math.random()*10); coinTimer = 2.2+Math.random()*2.4; }
+  var dz = speed*dt;
+  var i;
+  for(i=obstacles.length-1;i>=0;i--){ obstacles[i].z -= dz; if(obstacles[i].z < -22) obstacles.splice(i,1); }
+  for(i=coinsArr.length-1;i>=0;i--){ coinsArr[i].z -= dz; coinsArr[i].spin += dt*6; if(coinsAr
